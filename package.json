@@ -1,0 +1,155 @@
+{
+  "name": "markdown-picture-qol",
+  "displayName": "Markdown Picture QoL",
+  "description": "Paste pictures into Markdown notes, then rename and move them with F2.",
+  "version": "0.1.0",
+  "publisher": "markdown-picture-qol",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schen0x/vscode-md-picture-QoL.git"
+  },
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "markdown",
+    "image",
+    "paste",
+    "notes"
+  ],
+  "main": "./dist/extension.cjs",
+  "extensionKind": [
+    "workspace"
+  ],
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    },
+    "virtualWorkspaces": {
+      "supported": false
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "markdownPicture.renameImage",
+        "title": "Rename / Move Image",
+        "category": "Markdown Picture"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "markdownPicture.renameImage",
+        "key": "f2",
+        "when": "editorTextFocus && !editorReadonly && editorLangId == markdown && resourceExtname =~ /\\.[mM][dD]$/"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "markdownPicture.renameImage",
+          "when": "editorLangId == markdown && resourceExtname =~ /\\.[mM][dD]$/"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Markdown Picture QoL",
+      "properties": {
+        "markdownPicture.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Enable picture paste, rename, and image-tag highlighting in saved .md documents."
+        },
+        "markdownPicture.pasteDirectory": {
+          "type": "string",
+          "default": ".",
+          "scope": "resource",
+          "description": "Folder for pasted images, relative to the Markdown file. Use forward slashes on all platforms."
+        },
+        "markdownPicture.createDirectories": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Allow paste and rename to create missing destination folders."
+        },
+        "markdownPicture.convertToJpeg": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Convert pasted static PNG images to JPEG, flattening transparency onto white. Existing JPEGs and other formats keep their original bytes. Disable to preserve PNG quality and transparency."
+        },
+        "markdownPicture.jpegQuality": {
+          "type": "string",
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "enumDescriptions": [
+            "Quality 90: more detail, larger files.",
+            "Quality 75: balance detail and file size.",
+            "Quality 50: smaller files, more visible compression."
+          ],
+          "default": "medium",
+          "scope": "resource",
+          "description": "JPEG quality when converting pasted PNG images. Does not recompress existing JPEG files."
+        },
+        "markdownPicture.highlightImages": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Subtly color inline image tags whose relative local image exists. Checks once 5 seconds after an image-link edit, or 20 seconds after scrolling; skips notes over 1 MiB or 2,048 image tags."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "[markdown]": {
+        "editor.pasteAs.preferences": [
+          "markdown.link.image.pictureQol"
+        ]
+      }
+    },
+    "colors": [
+      {
+        "id": "markdownPicture.imageTagForeground",
+        "description": "Foreground of a Markdown image tag whose local image file exists.",
+        "defaults": {
+          "dark": "#80AA98",
+          "light": "#4E7967",
+          "highContrast": "#9ADDBE",
+          "highContrastLight": "#245E45"
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "npm run typecheck && node esbuild.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run compile && node --test dist/test/core.test.cjs dist/test/rename.test.cjs dist/test/highlight.test.cjs dist/test/image.test.cjs dist/test/paste.test.cjs test/workflows.test.cjs",
+    "test:integration": "npm run compile && node scripts/run-integration.cjs",
+    "package": "vsce package --no-dependencies",
+    "vscode:prepublish": "npm run compile"
+  },
+  "dependencies": {
+    "jpeg-js": "^0.4.4",
+    "mdast-util-from-markdown": "^2.0.2",
+    "pngjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "@types/pngjs": "^6.0.5",
+    "@types/vscode": "1.100.0",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.6.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.0"
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.vscode-test/
+*.vsix
+.test-workspace/
+.vscode-local/
+
+.npm-cache/

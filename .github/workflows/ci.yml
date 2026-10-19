@@ -1,0 +1,32 @@
+name: Build and test
+on: [push, pull_request]
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        vscode: [stable]
+        include:
+          - os: ubuntu-latest
+            vscode: 1.100.0
+    runs-on: ${{ matrix.os }}
+    env:
+      VSCODE_TEST_VERSION: ${{ matrix.vscode }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:integration
+      - if: runner.os != 'Linux'
+        run: npm run test:integration
+      - run: npm run package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: extension-${{ runner.os }}-${{ matrix.vscode }}
+          path: '*.vsix'

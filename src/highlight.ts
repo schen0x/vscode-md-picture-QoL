@@ -28,6 +28,7 @@ type Schedule = (callback: () => Promise<void>, delayMs: number) => vscode.Dispo
 interface HighlightOptions {
   schedule?: Schedule;
   stat?: typeof stat;
+  isWindowFocused?: () => boolean;
 }
 const scheduleTimeout: Schedule = (callback, delay) => {
   const timer = setTimeout(() => { void callback(); }, delay);
@@ -44,6 +45,7 @@ export class ImageTagHighlighter implements vscode.Disposable {
   private readonly subscriptions: vscode.Disposable[];
   private readonly schedule: Schedule;
   private readonly readStat: typeof stat;
+  private readonly isWindowFocused: () => boolean;
   // Serialize documents, so opening many notes never multiplies the filesystem concurrency.
   private work: Promise<void> = Promise.resolve();
   private disposed = false;
@@ -51,6 +53,7 @@ export class ImageTagHighlighter implements vscode.Disposable {
   constructor(options: HighlightOptions = {}) {
     this.schedule = options.schedule ?? scheduleTimeout;
     this.readStat = options.stat ?? stat;
+    this.isWindowFocused = options.isWindowFocused ?? (() => vscode.window.state.focused);
     this.subscriptions = [
       vscode.workspace.onDidOpenTextDocument(document => {
         const state = this.ensure(document);
@@ -126,7 +129,7 @@ export class ImageTagHighlighter implements vscode.Disposable {
 
   private editorsChanged(): void {
     for (const state of this.notes.values()) {
-      if (!vscode.window.state.focused || !this.visible(state.document)) {
+      if (!this.isWindowFocused() || !this.visible(state.document)) {
         state.generation++;
         state.timer?.dispose();
         state.timer = undefined;
@@ -159,7 +162,7 @@ export class ImageTagHighlighter implements vscode.Disposable {
     state.timer?.dispose();
     state.timer = undefined;
     state.pendingScan = false;
-    if (!vscode.window.state.focused || !this.visible(state.document)) return;
+    if (!this.isWindowFocused() || !this.visible(state.document)) return;
     state.pendingScan = true;
     state.timer = this.schedule(() => {
       state.timer = undefined;
@@ -188,7 +191,7 @@ export class ImageTagHighlighter implements vscode.Disposable {
 
   private current(state: NoteState, generation: number): boolean {
     return !this.disposed && this.notes.get(state.document) === state && state.generation === generation
-      && !state.document.isClosed && vscode.window.state.focused && this.visible(state.document);
+      && !state.document.isClosed && this.isWindowFocused() && this.visible(state.document);
   }
 
   private index(document: vscode.TextDocument): IndexedImage[] {

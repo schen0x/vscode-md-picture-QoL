@@ -113,6 +113,11 @@ async function checkPathGuards(note: vscode.TextDocument, root: vscode.Uri, fixt
   await buildRenameEdit(note, selected, '../inside.png');
   assert.equal(await stat(vscode.Uri.joinPath(root, 'inside.png')), undefined);
 
+  if (process.platform === 'win32') {
+    const target = vscode.Uri.joinPath(fixture, 'case-check.png');
+    await checkWorkspacePath(note, target.with({ path: target.path.toUpperCase() }));
+  }
+
   const linked = vscode.Uri.joinPath(fixture, 'linked');
   await symlink(dirname(root.fsPath), linked.fsPath, 'junction');
   try {
@@ -183,6 +188,9 @@ async function checkHighlighting(fixture: vscode.Uri): Promise<void> {
   const checks = new Map<string, vscode.FileStat | undefined>();
   let next = 0;
   const highlighter = new ImageTagHighlighter({
+    // Desktop CI does not guarantee OS window focus, even after showTextDocument.
+    // Unit tests cover focus gating; keep real editor/document/filesystem events here.
+    isWindowFocused: () => true,
     schedule: (callback, delay) => {
       const id = ++next;
       pending.set(id, { callback, delay });
@@ -190,7 +198,7 @@ async function checkHighlighting(fixture: vscode.Uri): Promise<void> {
     },
     stat: async target => {
       const info = await stat(target);
-      checks.set(target.path, info);
+      checks.set(target.toString(), info);
       return info;
     },
   });
@@ -204,9 +212,16 @@ async function checkHighlighting(fixture: vscode.Uri): Promise<void> {
     assert.equal([...pending.values()][0]!.delay, 0);
     await flush();
     assert.equal(checks.size, 3, 'Only distinct local inline image targets are checked');
-    assert.equal(checks.get(vscode.Uri.joinPath(fixture, 'old.png').path)?.type, vscode.FileType.File);
-    assert.equal(checks.get(vscode.Uri.joinPath(fixture, 'directory.png').path)?.type, vscode.FileType.Directory);
-    assert.equal(checks.get(vscode.Uri.joinPath(fixture, 'missing.png').path), undefined);
+    // VS Code can normalize the opened document's drive casing on Windows.
+    // Resolve expected keys from that document, just as the highlighter does.
+    const checked = (relative: string) => {
+      const key = relativeUri(document, relative).toString();
+      assert.ok(checks.has(key), `Expected a metadata check for ${key}; checked: ${[...checks.keys()].join(', ')}`);
+      return checks.get(key);
+    };
+    assert.equal(checked('./old.png')?.type, vscode.FileType.File);
+    assert.equal(checked('./directory.png')?.type, vscode.FileType.Directory);
+    assert.equal(checked('./missing.png'), undefined);
     assert.equal(pending.size, 0, 'No idle polling');
     const changed = new Promise<void>(resolve => {
       const subscription = vscode.workspace.onDidChangeTextDocument(event => {

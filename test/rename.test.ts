@@ -162,3 +162,32 @@ test('workspace guard supports remote workspace URIs', async () => {
   controller.dispose();
   await done;
 });
+
+test('workspace guard handles Windows path casing without permitting escapes', { skip: process.platform !== 'win32' }, async () => {
+  const { controller, done, document } = setup('![old](./old.png)', '/D:/Workspace/note.md');
+  mock.workspaceRoots.splice(0, mock.workspaceRoots.length, new mock.Uri('/D:/Workspace'));
+  try {
+    await checkWorkspacePath(document, new mock.Uri('/d:/workspace/images/new.png') as unknown as vscode.Uri);
+    for (const target of ['/d:/Workspace-other/new.png', '/d:/outside.png', '/E:/Workspace/new.png']) {
+      await assert.rejects(checkWorkspacePath(document, new mock.Uri(target) as unknown as vscode.Uri), /stay inside/);
+    }
+    mock.fileTypes.set('/D:/Workspace/linked', mock.FileType.Directory | mock.FileType.SymbolicLink);
+    await assert.rejects(checkWorkspacePath(document, new mock.Uri('/d:/Workspace/linked/new.png') as unknown as vscode.Uri), /symbolic links/);
+  } finally {
+    controller.dispose();
+    await done;
+  }
+});
+
+test('workspace guard preserves case-sensitive remote path boundaries', async () => {
+  const { controller, done, document } = setup();
+  Object.assign(document.uri, { scheme: 'vscode-remote', authority: 'ssh-remote+host' });
+  Object.assign(mock.workspaceRoots[0]!, { scheme: 'vscode-remote', authority: 'ssh-remote+host' });
+  try {
+    const target = Object.assign(new mock.Uri('/Workspace/new.png'), { scheme: 'vscode-remote', authority: 'ssh-remote+host' });
+    await assert.rejects(checkWorkspacePath(document, target as unknown as vscode.Uri), /stay inside/);
+  } finally {
+    controller.dispose();
+    await done;
+  }
+});

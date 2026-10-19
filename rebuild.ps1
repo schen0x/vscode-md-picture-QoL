@@ -39,7 +39,10 @@ try {
         throw 'Install Node.js 22 or newer and add it to PATH.'
     }
     # Prefer npm.cmd on Windows to avoid requiring npm.ps1 execution permission.
-    $script:npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+    $script:npmCommand = $null
+    if ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) {
+        $script:npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+    }
     if (-not $script:npmCommand) { $script:npmCommand = Get-Command npm -ErrorAction Stop }
     $env:npm_config_cache = Join-Path $PSScriptRoot '.npm-cache'
     if ($Verbose) { $env:npm_config_loglevel = 'verbose' }

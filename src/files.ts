@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { posix as path } from 'node:path';
+import { posix as path, win32 } from 'node:path';
 import { imageLinks, imageMarkdown, localImagePath, imageExtension, normalizeDestination, type ImageLink } from './core';
 import type { JpegQuality } from './image';
 
@@ -36,9 +36,15 @@ export async function stat(uri: vscode.Uri): Promise<vscode.FileStat | undefined
 export async function checkWorkspacePath(document: vscode.TextDocument, target: vscode.Uri): Promise<void> {
   const root = vscode.workspace.getWorkspaceFolder(document.uri)?.uri;
   if (!root) throw new Error('Open the Markdown note in a workspace folder before creating or renaming images.');
-  const relative = path.relative(root.path, target.path);
+  // Local Windows paths are case-insensitive (including drive letters). Remote
+  // URI paths keep POSIX semantics even when the client runs on Windows.
+  const windowsLocal = root.scheme === 'file' && process.platform === 'win32';
+  const relative = windowsLocal
+    ? win32.relative(root.fsPath, target.fsPath).replace(/\\/g, '/')
+    : path.relative(root.path, target.path);
   if (target.scheme !== root.scheme || target.authority !== root.authority
-    || relative === '..' || relative.startsWith('../') || path.isAbsolute(relative)) {
+    || relative === '..' || relative.startsWith('../') || path.isAbsolute(relative)
+    || (windowsLocal && win32.isAbsolute(relative))) {
     throw new Error('Image paths must stay inside the Markdown note\'s workspace folder.');
   }
   // Walk from the root so we never follow a symlink while checking a deeper path.

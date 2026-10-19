@@ -13,6 +13,11 @@ class EventSource<T> {
 export class Uri {
   scheme = 'file'; authority = ''; query = ''; fragment = '';
   constructor(public path: string) {}
+  get fsPath() {
+    if (process.platform !== 'win32' || this.scheme !== 'file') return this.path;
+    const local = /^\/[a-z]:/i.test(this.path) ? this.path.slice(1) : `C:${this.path}`;
+    return (this.authority ? `//${this.authority}${this.path}` : local).replace(/\//g, '\\');
+  }
   static joinPath(base: Uri, ...parts: string[]) {
     return Object.assign(new Uri(path.join(base.path, ...parts)), { scheme: base.scheme, authority: base.authority });
   }

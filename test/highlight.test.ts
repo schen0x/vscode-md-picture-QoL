@@ -291,6 +291,43 @@ test('hiding or unfocusing cancels pending work; returning resumes without polli
   assert.equal(s.calls.length, 3);
 });
 
+test('an initially unfocused window defers the opening pass until focus returns', async t => {
+  const s = setup(t);
+  s.controller.dispose();
+  mock.window.state.focused = false;
+  const controller = new ImageTagHighlighter({ schedule: s.clock.schedule, stat: async () => file });
+  t.after(() => controller.dispose());
+  assert.equal(s.clock.jobs.size, 0);
+  mock.window.state.focused = true;
+  await mock.windowChange.fire(mock.window.state as vscode.WindowState);
+  await s.clock.advance(0);
+  assert.equal(s.view.ranges.length, 2);
+});
+
+test('injected focus keeps opening and edit scans independent of desktop focus events', async t => {
+  const s = setup(t);
+  s.controller.dispose();
+  mock.window.state.focused = false;
+  const calls: string[] = [];
+  const controller = new ImageTagHighlighter({
+    schedule: s.clock.schedule,
+    isWindowFocused: () => true,
+    stat: async uri => { calls.push(uri.path); return file; },
+  });
+  t.after(() => controller.dispose());
+  assert.equal(s.clock.jobs.size, 1, 'Opening must schedule even when the desktop is unfocused');
+  await mock.windowChange.fire(mock.window.state as vscode.WindowState);
+  await s.clock.advance(0);
+  assert.equal(calls.length, 2, 'A desktop focus event must not cancel the opening scan');
+  assert.equal(s.view.ranges.length, 2);
+  await s.edit('![new](./new.png)');
+  await mock.windowChange.fire(mock.window.state as vscode.WindowState);
+  await s.clock.advance(highlightLimits.editDelayMs);
+  assert.equal(calls.at(-1), '/workspace/new.png');
+  assert.equal(s.view.ranges.length, 1);
+  assert.equal(s.clock.jobs.size, 0);
+});
+
 test('an interrupted opening pass resumes without rechecking completed targets', async t => {
   const gate = deferred<void>();
   const s = setup(t, Array.from({ length: 6 }, (_, i) => `![${i}](./${i}.png)`).join(' '), async uri => {

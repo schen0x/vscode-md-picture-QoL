@@ -12,6 +12,8 @@ Quality of Life plugin for Markdown (`*.md`) (VSCode extension)
 
 - Optionally (enabled by default), auto convert PNG to JPG to save space
 
+- Format selected Markdown tables with centered, evenly padded columns
+
 - Existing destination files and folders are never overwritten
 
 - VSCode's Undo can revert a rename or paste behavior including its implied file operation (exception: a newly created folder if exists, will remain)
@@ -37,6 +39,35 @@ Quality of Life plugin for Markdown (`*.md`) (VSCode extension)
 
 4. Hover cursor on the `(./*.jpg)` part of the markdown image link, press `F2` to rename and move the image. Only accept relative path that land inside the workspace. Does not allow symbolic linked folder as the destination. Use `Esc` or click elsewhere to cancel the rename. Switch to another application keep the renaming window
 
+
+## Forma Tables
+
+Highlight a table and press **Ctrl+Alt+Shift+F** (Windows/Linux) or
+**Cmd+Option+Shift+F** (macOS). You can also right-click and choose
+**Forma Table**, or run **Markdown: Forma Table** from the
+Command Palette. Search for that command in Keyboard Shortcuts to change the key.
+
+```md
+|   Name    | Value |
+| :-------: | :---: |
+|     A     |  42   |
+| long name |   7   |
+```
+
+The command uses ordinary half-width spaces and measures Unicode display width
+(including CJK and emoji) for alignment in a monospace editor. Leading spaces and
+tabs are preserved. Partially selected lines are included in full; a selection
+ending at the start of the next line excludes that line. Multiple selections are
+supported, and one Undo restores the formatting operation.
+
+Tables need at least two rows and two columns with matching cell counts. Outer
+pipes and a header separator are optional in the input. The first row is treated
+as the header, and a missing separator is inserted beneath it. Separators become
+centered (`:---:`), which also centers columns in Markdown previews. Escape literal
+pipes inside cells as `\|`, including inside inline code. Other text is left intact.
+This command also works in unsaved Markdown documents and is independent of the
+picture settings. Visual alignment depends on the editor's font; tabs inside
+cells and proportional fonts may not align.
 
 ## Relevant VSCode document
 

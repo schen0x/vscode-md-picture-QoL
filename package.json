@@ -39,12 +39,24 @@
   "contributes": {
     "commands": [
       {
+        "command": "markdownQol.formatTable",
+        "title": "Forma Table",
+        "category": "Markdown",
+        "enablement": "editorLangId == markdown && editorHasSelection && !editorReadonly"
+      },
+      {
         "command": "markdownPicture.renameImage",
         "title": "Rename / Move Image",
         "category": "Markdown Picture"
       }
     ],
     "keybindings": [
+      {
+        "command": "markdownQol.formatTable",
+        "key": "ctrl+alt+shift+f",
+        "mac": "cmd+alt+shift+f",
+        "when": "editorTextFocus && editorHasSelection && !editorReadonly && editorLangId == markdown"
+      },
       {
         "command": "markdownPicture.renameImage",
         "key": "f2",
@@ -54,8 +66,19 @@
     "menus": {
       "commandPalette": [
         {
+          "command": "markdownQol.formatTable",
+          "when": "editorLangId == markdown"
+        },
+        {
           "command": "markdownPicture.renameImage",
           "when": "editorLangId == markdown && resourceExtname =~ /\\.[mM][dD]$/"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "markdownQol.formatTable",
+          "when": "editorLangId == markdown && editorHasSelection && !editorReadonly",
+          "group": "1_modification"
         }
       ]
     },
@@ -133,7 +156,7 @@
   "scripts": {
     "compile": "npm run typecheck && node esbuild.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "npm run compile && node --test dist/test/core.test.cjs dist/test/rename.test.cjs dist/test/highlight.test.cjs dist/test/image.test.cjs dist/test/paste.test.cjs test/workflows.test.cjs",
+    "test": "npm run compile && node --test dist/test/core.test.cjs dist/test/rename.test.cjs dist/test/highlight.test.cjs dist/test/image.test.cjs dist/test/paste.test.cjs dist/test/table.test.cjs test/workflows.test.cjs",
     "test:integration": "npm run compile && node scripts/run-integration.cjs",
     "package": "vsce package --no-dependencies",
     "vscode:prepublish": "npm run compile"
@@ -141,7 +164,8 @@
   "dependencies": {
     "jpeg-js": "^0.4.4",
     "mdast-util-from-markdown": "^2.0.2",
-    "pngjs": "^7.0.0"
+    "pngjs": "^7.0.0",
+    "string-width": "^7.2.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.0",

@@ -100,10 +100,27 @@ export async function run(): Promise<void> {
   assert.equal(await provider.provideDocumentPasteEdits(note, [], transfer, { triggerKind: vscode.DocumentPasteTriggerKind.Automatic, only: undefined }, cancelled.token), undefined);
   cancelled.dispose();
   await checkHighlighting(fixture);
+  await checkTableFormatting();
   await config.update('enabled', false, vscode.ConfigurationTarget.Workspace);
   assert.equal(await provider.provideDocumentPasteEdits(note, [], transfer, { triggerKind: vscode.DocumentPasteTriggerKind.Automatic, only: undefined }, token), undefined);
   console.log('PASS: non-Markdown documents, text clipboard, cancellation, and disabled extension');
   await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+}
+
+async function checkTableFormatting(): Promise<void> {
+  const original = 'Before\n  | a | b |\n  | longer | x |\nAfter\n';
+  const document = await vscode.workspace.openTextDocument({ language: 'markdown', content: original });
+  const editor = await vscode.window.showTextDocument(document);
+  editor.selection = new vscode.Selection(1, 4, 3, 0);
+  await vscode.commands.executeCommand('markdownQol.formatTable');
+  // Text editor commands do not await promises returned by their callbacks.
+  for (let attempt = 0; attempt < 100 && document.getText() === original; attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  assert.equal(document.getText(), 'Before\n  |   a    |   b   |\n  | :----: | :---: |\n  | longer |   x   |\nAfter\n');
+  await vscode.commands.executeCommand('undo');
+  assert.equal(document.getText(), original, 'One Undo restores the selected table');
+  console.log('PASS: registered table command, unsaved Markdown, partial selection, and Undo');
 }
 
 async function checkPathGuards(note: vscode.TextDocument, root: vscode.Uri, fixture: vscode.Uri): Promise<void> {
